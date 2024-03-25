@@ -44,11 +44,11 @@ public:
         CONNECT,
         PATH
     };
-    enum CHECK_STATE
+    enum CHECK_STATE // 主状态机可能的三种状态
     {
-        CHECK_STATE_REQUESTLINE = 0,
-        CHECK_STATE_HEADER,
-        CHECK_STATE_CONTENT
+        CHECK_STATE_REQUESTLINE = 0, // 现在正在分析请求行
+        CHECK_STATE_HEADER, // 现在正在分析头部字段
+        CHECK_STATE_CONTENT // 解析消息体，仅用于POST请求
     };
     enum HTTP_CODE
     {
@@ -61,11 +61,12 @@ public:
         INTERNAL_ERROR,
         CLOSED_CONNECTION
     };
-    enum LINE_STATUS
+    // 从状态机的状态表明对请求报文当前部分的处理是否出现问题
+    enum LINE_STATUS // 从状态机的状态
     {
-        LINE_OK = 0,
-        LINE_BAD,
-        LINE_OPEN
+        LINE_OK = 0, // 完整读取一行
+        LINE_BAD, // 报文语法有错误
+        LINE_OPEN // 读取的行不完整
     };
 
 public:
