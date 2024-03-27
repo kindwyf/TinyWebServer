@@ -109,50 +109,67 @@ void WebServer::eventListen()
     //优雅关闭连接
     if (0 == m_OPT_LINGER)
     {
+        // 不启用优雅关闭连接，设置so_linger套接字选项，立即关闭连接
         struct linger tmp = {0, 1};
         setsockopt(m_listenfd, SOL_SOCKET, SO_LINGER, &tmp, sizeof(tmp));
     }
     else if (1 == m_OPT_LINGER)
     {
+        // 启用优雅关闭连接，设置so_linger套接字选项，等待未发送的数据发送完毕后再关闭连接
         struct linger tmp = {1, 1};
         setsockopt(m_listenfd, SOL_SOCKET, SO_LINGER, &tmp, sizeof(tmp));
     }
 
     int ret = 0;
+    // 创建并配置服务器地址结构体address
     struct sockaddr_in address;
     bzero(&address, sizeof(address));
+    // 设置地址族为AF_INET，表示使用IPv4地址
     address.sin_family = AF_INET;
+    // 设置IP地址为INADDR_ANY，表示绑定到所有可用的网络接口
     address.sin_addr.s_addr = htonl(INADDR_ANY);
     // 端口号：m_port
     address.sin_port = htons(m_port);
 
     int flag = 1;
+    // 启用SO_REUSEADDR套接字选项，以便在服务器重启时能够重新使用绑定的端口
     setsockopt(m_listenfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
+    // 绑定套接字到指定的地址结构体，这将服务器的监听套接字与指定的端口绑定在一起
     ret = bind(m_listenfd, (struct sockaddr *)&address, sizeof(address));
     assert(ret >= 0);
+    // 调用listen函数开始监听连接请求，设置最大等待连接队列的长度为5
     ret = listen(m_listenfd, 5);
     assert(ret >= 0);
-
+    // 初始化实例utils
     utils.init(TIMESLOT);
 
     //epoll创建内核事件表
+    // 声明了一个存储 epoll 事件的数组 events，数组的大小是 MAX_EVENT_NUMBER
     epoll_event events[MAX_EVENT_NUMBER];
     // 返回指示内核事件表的文件描述符m_epollfd
     m_epollfd = epoll_create(5);
     assert(m_epollfd != -1);
-
+    // 调用utils对象的addfd函数，将监听套接字m_listenfd添加到epoll事件表中，指定事件监听方式为 m_LISTENTrigmode
     utils.addfd(m_epollfd, m_listenfd, false, m_LISTENTrigmode);
+    
+    // 设置http_conn类的成员变量
     http_conn::m_epollfd = m_epollfd;
-
+    // 创建了一个UNIX域的全双工套接字对，其中m_pipefd数组中存储了两个套接字描述符，用于进程间通信。
     ret = socketpair(PF_UNIX, SOCK_STREAM, 0, m_pipefd);
     assert(ret != -1);
+    // 将m_pipefd[1]设置为非阻塞模式，以提高管道写入的效率。
     utils.setnonblocking(m_pipefd[1]);
+    // 将m_pipefd[0]添加到epoll事件表中，用于监听管道读事件。
     utils.addfd(m_epollfd, m_pipefd[0], false, 0);
 
+    // 设置了忽略SIGPIPE信号，这是为了防止在向已关闭的套接字写入数据时触发SIGPIPE信号导致程序退出
     utils.addsig(SIGPIPE, SIG_IGN);
+    // 设置了SIGALRM信号的处理函数为utils::sig_handler，并指定false参数表示不重新启用信号处理。
     utils.addsig(SIGALRM, utils.sig_handler, false);
+    // 设置了SIGALRM信号的处理函数为utils::sig_handler，并指定false参数表示不重新启用信号处理。
     utils.addsig(SIGTERM, utils.sig_handler, false);
 
+    // 设置一个定时器，每隔TIMESLOT秒触发一次SIGALRM信号，这将用于定时任务的处理。
     alarm(TIMESLOT);
 
     //工具类,信号和描述符基础操作
