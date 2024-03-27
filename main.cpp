@@ -32,6 +32,8 @@ int main(int argc, char *argv[])
     server.trig_mode();
 
     //监听
+    /*创建服务器socket，绑定端口号并持续监听；
+    创建epoll内核事件表，*/
     server.eventListen();
 
     //运行

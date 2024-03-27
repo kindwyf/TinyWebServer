@@ -395,7 +395,9 @@ void WebServer::dealwithwrite(int sockfd)
 // 事件回环（服务器主线程）
 void WebServer::eventLoop()
 {
+    // 是否发生了定时器超时
     bool timeout = false;
+    // 是否要停止服务器
     bool stop_server = false;
 
     while (!stop_server)
@@ -403,6 +405,7 @@ void WebServer::eventLoop()
         // 等待所监控文件描述符上有事件的产生
         // 返回就绪的文件描述符的个数
         int number = epoll_wait(m_epollfd, events, MAX_EVENT_NUMBER, -1);
+        // 如果返回值小于0且错误码不是EINTR（表示被信号中断），则打印错误信息，并退出循环
         if (number < 0 && errno != EINTR)
         {
             LOG_ERROR("%s", "epoll failure");
@@ -417,24 +420,27 @@ void WebServer::eventLoop()
 
             //处理新到的客户连接
             // m_listenfd是服务器socket()返回值
-            // 说明是新的连接
+            // 如果事件是由服务器监听套接字m_listenfd触发的，表示有新的客户端连接请求，进入处理新客户端连接的分支
             if (sockfd == m_listenfd)
             {
+                //这个函数的目的是处理新的客户端连接数据，并返回一个布尔值flag，表示处理结果。
                 bool flag = dealclinetdata();
+                //如果处理结果flag为false，则跳过当前循环迭代，继续处理下一个事件。
                 if (false == flag)
                     continue;
             }
-            // 处理异常事件
+            // 处理异常事件，套接字关闭或发生错误的情况，移除对应的定时器
             else if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR))
             {
                 //服务器端关闭连接，移除对应的定时器
                 util_timer *timer = users_timer[sockfd].timer;
                 deal_timer(timer, sockfd);
             }
-            //处理信号
+            // 处理从管道读取的信号事件，用于处理信号
             else if ((sockfd == m_pipefd[0]) && (events[i].events & EPOLLIN))
             {
                 bool flag = dealwithsignal(timeout, stop_server);
+                // 处理信号事件时出现了错误，通过日志记录错误信息。
                 if (false == flag)
                     LOG_ERROR("%s", "dealclientdata failure");
             }
@@ -448,6 +454,7 @@ void WebServer::eventLoop()
                 dealwithwrite(sockfd);
             }
         }
+        // timeout为true，表示发生了定时器超时，会调用utils.timer_handler()处理定时器事件，并打印相关信息
         if (timeout)
         {
             utils.timer_handler();
