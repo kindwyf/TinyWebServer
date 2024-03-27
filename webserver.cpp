@@ -123,6 +123,7 @@ void WebServer::eventListen()
     bzero(&address, sizeof(address));
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = htonl(INADDR_ANY);
+    // 端口号：m_port
     address.sin_port = htons(m_port);
 
     int flag = 1;
@@ -136,6 +137,7 @@ void WebServer::eventListen()
 
     //epoll创建内核事件表
     epoll_event events[MAX_EVENT_NUMBER];
+    // 返回指示内核事件表的文件描述符m_epollfd
     m_epollfd = epoll_create(5);
     assert(m_epollfd != -1);
 
@@ -382,6 +384,7 @@ void WebServer::eventLoop()
     while (!stop_server)
     {
         // 等待所监控文件描述符上有事件的产生
+        // 返回就绪的文件描述符的个数
         int number = epoll_wait(m_epollfd, events, MAX_EVENT_NUMBER, -1);
         if (number < 0 && errno != EINTR)
         {
@@ -396,6 +399,8 @@ void WebServer::eventLoop()
             int sockfd = events[i].data.fd;
 
             //处理新到的客户连接
+            // m_listenfd是服务器socket()返回值
+            // 说明是新的连接
             if (sockfd == m_listenfd)
             {
                 bool flag = dealclinetdata();
