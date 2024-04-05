@@ -26,39 +26,51 @@
 
 class util_timer;
 
+// 用户数据结构
 struct client_data
 {
+    // 客户端socket地址
     sockaddr_in address;
+    // socket文件描述符
     int sockfd;
+    // 定时器
     util_timer *timer;
 };
 
+// 定时器类
 class util_timer
 {
 public:
     util_timer() : prev(NULL), next(NULL) {}
 
 public:
+    // time_t定义为一个有符号长整型，用于存储自1970年1月1日以来经过的秒数。
     time_t expire;
-    
+    // 定时触发函数，参数是用户数据
     void (* cb_func)(client_data *);
+    // 用户数据
     client_data *user_data;
     util_timer *prev;
     util_timer *next;
 };
 
+// 定时器双向链表，根据超时时间expire升序排列
 class sort_timer_lst
 {
 public:
     sort_timer_lst();
     ~sort_timer_lst();
-
+    // 加入计时器（expire小于当前链表表头）
     void add_timer(util_timer *timer);
+    // 调整计时器位置
     void adjust_timer(util_timer *timer);
+    // 删除计时器
     void del_timer(util_timer *timer);
+    // SIGALRM信号触发时就在其信号处理函数中执行tick，处理链表上到期的任务
     void tick();
 
 private:
+    // 将目标定时器timer插入lst_head之后的部分链表中
     void add_timer(util_timer *timer, util_timer *lst_head);
 
     util_timer *head;

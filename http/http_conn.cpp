@@ -234,7 +234,9 @@ bool http_conn::read_once()
     {
         while (true)
         {
+            // recv成功时返回实际读到的数据长度
             bytes_read = recv(m_sockfd, m_read_buf + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0);
+            // recv返回-1表示出错，设置errno
             if (bytes_read == -1)
             {
                 //非阻塞ET模式下，需要一次性将数据读完
@@ -242,6 +244,7 @@ bool http_conn::read_once()
                     break;
                 return false;
             }
+            // recv返回0表示通信对方已经关闭连接
             else if (bytes_read == 0)
             {
                 return false;
@@ -670,6 +673,8 @@ bool http_conn::write()
     while (1)
     {   
         //将响应报文的状态行、消息头、空行和响应正文发送给浏览器端
+        //writev将多块分散的内存数据一并写入文件描述符m_sockfd中，即集中写
+        //成功时返回写入的字节数
         temp=writev(m_sockfd,m_iv,m_iv_count);
 
         //正常发送，temp为发送的字节数

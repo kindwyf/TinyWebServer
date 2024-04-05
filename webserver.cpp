@@ -140,7 +140,7 @@ void WebServer::eventListen()
     // 调用listen函数开始监听连接请求，设置最大等待连接队列的长度为5
     ret = listen(m_listenfd, 5);
     assert(ret >= 0);
-    // 初始化实例utils
+    // 初始化实例utils，TIMESLOT默认为5
     utils.init(TIMESLOT);
 
     //epoll创建内核事件表
