@@ -167,7 +167,8 @@ public:
         return true;
     }
 
-    //增加了超时处理
+    //增加了超时处理，在项目中没有使用到
+    //在pthread_cond_wait基础上增加了等待的时间，只指定时间内能抢到互斥锁即可
     bool pop(T &item, int ms_timeout)
     {
         struct timespec t = {0, 0};
@@ -199,14 +200,14 @@ public:
     }
 
 private:
-    locker m_mutex;
-    cond m_cond;
+    locker m_mutex; // 互斥锁
+    cond m_cond; // 条件变量
 
-    T *m_array;
-    int m_size;
-    int m_max_size;
-    int m_front;
-    int m_back;
+    T *m_array; // 循环数组表示队列
+    int m_size; // 已有数量
+    int m_max_size; // 最大数量
+    int m_front; // 队首指针
+    int m_back; // 队尾指针
 };
 
 #endif
